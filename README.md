@@ -1,4 +1,4 @@
-# Symptom Agreement
+# Use of Patient-Reported Symptom Data in Clinical Decision Rules for Predicting Influenza in a Telemedicine Setting
 
 W. Zane Billings, Annika Cleven, Jacqueline Dworaczyk, Ariella Perry Dale,
 Mark Ebell, Brian McKay, Andreas Handel
@@ -6,6 +6,9 @@ Mark Ebell, Brian McKay, Andreas Handel
 ## Project Description
 
 We analyzed the predictive power of patient-reported symptom data in comparison to clinician reported symptom data to predict clinical diagnosis with influenza and lab-confirmed diagnosis. We also analyzed the agreement between patient and clinician symptoms, as well as the agreement between PCR and RADT diagnostic methods.
+
+This code accompanies [Use of Patient-Reported Symptom Data in Clinical Decision Rules for Predicting Influenza in a Telemedicine Setting
+](https://www.jabfm.org/content/36/5/766.abstract).
 
 ## Data
 

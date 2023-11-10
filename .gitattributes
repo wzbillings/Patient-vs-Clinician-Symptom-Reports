@@ -7,6 +7,7 @@
 *.htm* linguist-detectable=false
 *.js linguist-detectable=false
 *.bib linguist-detectable=false
+*.css linguist-detectable=false
 
 # Exclude renv directory
 renv/* linguist-vendored

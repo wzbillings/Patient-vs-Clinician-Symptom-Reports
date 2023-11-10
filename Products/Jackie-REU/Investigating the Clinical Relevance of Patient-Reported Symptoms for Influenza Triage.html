@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<meta name="generator" content="pandoc" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+
+<!--
+Font-awesome icons ie github or twitter
+-->
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.1/css/all.css" integrity="sha384-50oBUHEmvpQ+1lW4y57PTFmhCaXp0ML5d60M1M7uH2+nqUivzIebhndOJK28anvf" crossorigin="anonymous">
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.1/css/brands.css" integrity="sha384-n9+6/aSqa9lBidZMRCQHTHKJscPq6NW4pCQBiMmHdUCvPN8ZOg2zJJTkC7WIezWv" crossorigin="anonymous">
+
+<!--
+Google fonts api stuff
+-->
+<link href='https://fonts.googleapis.com/css?family=Helvetica' rel='stylesheet'>
+<link href='https://fonts.googleapis.com/css?family=Helvetica' rel='stylesheet'>
+
+
+
+<title>Investigating the Clinical Relevance of Patient-Reported Symptoms for Influenza Triage</title>
+
+<script src="REU-Poster_files/header-attrs-2.8/header-attrs.js"></script>
+
+
+
+
+<style>
+@page {
+size: 48in 36in;
+margin: 0;
+padding: 0;
+}
+body {
+margin: 0;
+font-size: 50px;
+width: 48in;
+height: 36in;
+padding: 0;
+text-align: justify;
+font-family: Helvetica;
+}
+.poster_wrap {
+width: 48in;
+height: 36in;
+padding: 0cm;
+}
+.title_container {
+width: 100%;
+height: 15%;
+overflow: hidden;
+background-color: #8C1D40;
+border: 0 solid #8C1D40
+;
+}
+.logo_left {
+float: left;
+width: 10%;
+height: 100%;
+background-color: #8C1D40;
+display: flex;
+align-items: center;
+justify-content: center;
+}
+.logo_right {
+float: right;
+width: 10%;
+height: 100%;
+background-color: #8C1D40;
+display: flex;
+align-items: center;
+justify-content: center;
+}
+.poster_title {
+text-align: center;
+position: relative;
+float: left;
+width: 80%;
+height: 100%;
+color: #FFFFFF;
+top: 50%;
+transform: translateY(-50%);
+-webkit-transform: translateY(-50%);
+}
+#title {
+font-family: Helvetica;
+}
+/* unvisited link */
+a:link {
+color: #008080;
+text-decoration: none;
+}
+.mybreak {
+  break-before: column;
+}
+/* visited link */
+a:visited {
+color: #008080;
+text-decoration: none;
+}
+
+/* mouse over link */
+a:hover {
+color: #008080;
+text-decoration: none;
+}
+
+/* selected link */
+a:active {
+color: #008080;
+text-decoration: none;
+}
+.poster_body {
+-webkit-column-count: 3; /* Chrome, Safari, Opera */
+-moz-column-count: 3; /* Firefox */
+column-count: 3;
+-webkit-column-fill: auto;
+-moz-column-fill: auto;
+column-fill: auto;
+-webkit-column-rule-width: 1mm;
+-moz-column-rule-width: 1mm;
+column-rule-width: 1mm;
+-webkit-column-rule-style: dashed;
+-moz-column-rule-style: dashed;
+column-rule-style: dashed;
+-webkit-column-rule-color: #8C1D40;
+-moz-column-rule-color: #8C1D40;
+column-rule-color: #8C1D40;
+column-gap: 1em;
+padding-left: 0.5em;
+padding-right: 0.5em;
+height: 100%;
+color: #000000
+background-color: #ffffff;
+}
+.poster_title h1 {
+font-size: 75pt;
+margin: 0;
+border: 0;
+font-weight: normal;
+}
+.poster_body_wrap{
+width: 48in;
+height: calc(100% - 17%);
+padding-top: calc(36in * 0.01);
+padding-bottom: calc(36in * 0.01);
+background-color: #ffffff;
+}
+.poster_title h3 {
+color: #ffffff;
+font-size: 50pt;
+margin: 0;
+border: 0;
+font-weight: normal;
+}
+.poster_title h3 > sup {
+  font-size: 35pt;
+  margin-left: 0.02em;
+}
+.poster_title h5 {
+color: #FFFFFF;
+font-size: 35pt;
+margin: 0;
+border: 0;
+font-weight: normal;
+}
+img {
+margin-top: 0;
+margin-bottom: 0;
+}
+.section {
+  padding: 0.2em;
+}
+.poster_body h1 {
+text-align: center;
+color: #FFFFFF;
+font-size: 65pt;
+border: 2mm solid #8C1D40;
+background-color: #8C1D40;
+border-radius: 4mm 0mm;
+margin-top: 2mm;
+margin-bottom: 2mm;
+font-weight: normal;
+}
+.poster_body h2 {
+color: #000000;
+font-size: 40pt;
+padding-left: 4mm;
+font-weight: normal;
+}
+.span {
+width: 200%;
+}
+/* center align leaflet map,
+from https://stackoverflow.com/questions/52112119/center-leaflet-in-a-rmarkdown-document */
+.html-widget {
+margin: auto;
+position: sticky;
+margin-top: 2cm;
+margin-bottom: 2cm;
+}
+.leaflet.html-widget.html-widget-static-bound.leaflet-container.leaflet-touch.leaflet-fade-anim.leaflet-grab.leaflet-touch-drag.leaflet-touch-zoom {
+position: sticky;
+width: 100%;
+}
+pre.sourceCode.r, pre.sourceCode.python {
+background-color: #ffffff20;
+border: solid #008080 1mm;
+border-radius: 0.5em;
+padding: 4mm;
+margin: auto;
+margin-top: 1em;
+margin-bottom: 1em;
+/* align-items: center; */
+}
+div.sourceCode {
+background-color: transparent;
+width: 85%;
+margin-left: auto;
+margin-right: auto;
+}
+code.sourceCode.r, code.sourceCode.python {
+background-color: transparent;
+font-size: 20pt;
+border-radius: 2mm;
+}
+code {
+font-size: 25pt;
+font-family: monospace;
+background-color: #00808024;
+color: #008080;
+padding: 1.2mm;
+line-height: 1;
+border-radius: 2mm;
+}
+.caption {
+font-size: 20pt;
+}
+.table caption {
+font-size: 20pt;
+padding-bottom: 3mm;
+
+}
+code {
+font-size: 1em;
+font-family: monospace;
+background-color: #00808024;
+color: #8C1D40;
+padding: 1.2mm;
+border-radius: 2mm;
+}
+.poster_title code {
+font-size: 1em;
+}
+table {
+font-size: 40px;
+margin: auto;
+border-top: 3px solid #666;
+border-bottom: 3px solid #666;
+}
+table thead th {
+border-bottom: 3px solid #ddd;
+}
+td {
+padding: 8px;
+}
+th {
+padding: 15px;
+}
+caption {
+margin-bottom: 10px;
+}
+.poster_body p {
+margin-right: 4mm;
+margin-left: 4mm;
+margin-top: 6mm;
+margin-bottom: 10mm;
+color: #000000
+}
+.poster_body ol {
+margin-right: 4mm;
+margin-left: 4mm;
+}
+#ul {
+margin-right: 4mm;
+margin-left: 4mm;
+}
+.references p {
+font-size: 20pt;
+}
+.orcid img {
+  width: 1em;
+}
+</style>
+</head>
+<body>
+
+
+<div class="poster_wrap">
+<div class="title_container">
+<!-- Left Logo  -->
+<div class="logo_left">
+<img src=Figures/logo.png style="width: 80%">
+</div>
+<!-- Poster Title -->
+<div class= "poster_title">
+<h1 id="title">Investigating the Clinical Relevance of Patient-Reported Symptoms for Influenza Triage</h1>
+<h3 id="author">Jacqueline Dworaczyk<sup>1</sup>, Andreas Handel<sup>2</sup>, Brian McKay<sup>3</sup>, Zane Billings<sup>2</sup></h3>
+<h5 id="affiliation"><sup>1</sup> School of Mathematical and Statistical Sciences, Arizona State University; <sup>2</sup> Department of Epidemiology and Biostatistics, University of Georgia; <sup>3</sup> Department of Family and Consumer Sciences, University of Georgia</h5>
+</div>
+<!-- Right Logo  -->
+<div class="logo_right">
+<img src=Figures/logo.png style="width: 80%">
+</div>
+</div>
+
+<div class='poster_body_wrap'>
+<div class='poster_body'>
+<style>
+.logo_left, .logo_right {
+ width: 15%;
+ height: 70%;
+ padding-top: 1em;
+}
+.poster_title {
+width: 70%;
+padding-top: 1em;
+}
+body {
+text-align: left;
+}
+p.caption {
+  font-size: 0.9em;
+}
+.special {
+  font-size: 0.94em
+}
+</style>
+<div id="introduction" class="section level1">
+<h1>Introduction</h1>
+<ul>
+<li>In the age of Covid-19, telemedicine is becoming increasingly popular</li>
+<li>During a public health crisis, telemedicine could be used as a tool to triage patients and prevent stress on the health care system</li>
+</ul>
+<p><strong>Motivation: If the patient can get the same diagnosis without an in person visit, you reduce the burden on the healthcare system.</strong></p>
+<ul>
+<li>However, clinicians and patients often disagree on symptoms.</li>
+</ul>
+<p><strong>Question: Can a patient symptom questionnaire be used to effectively predict influenza diagnosis by a physician?</strong></p>
+<ul>
+<li>The data is from a previous study at UGA’s University Health Center during the 2016-2017 flu season (described in ___)</li>
+<li>A symptom questionnaire containing 19 symptom pairs was given to both patients and clinicians</li>
+<li>Patients filled out symptom questionnaire before the appointment</li>
+<li>Clincians filled out symptom questionnaire during the appointment</li>
+</ul>
+</div>
+<div id="clinical-decision-rules" class="section level1">
+<h1>Clinical Decision Rules</h1>
+<p><strong>We applied 5 clinical decision rules:</strong></p>
+<ul>
+<li>CF: Cough-Fever Rule</li>
+<li>CFM: Cough-Fever-Myalgia Rule</li>
+<li>CFA: Cough-Fever-Acute Onset Rule</li>
+<li>Weighted Flu Score: 2 points for cough+fever and muscle pain, 1 point for acute onset and chills/sweats</li>
+<li>Tree: See figure 1
+<div class="figure" style="text-align: center"><span id="fig:fig1"></span>
+<img src="Figures/Algorithm%20flowchart%20example.png" alt="Description of figure" width="70%" />
+<p class="caption">
+Figure 1: Description of figure
+</p>
+</div>
+<!-- <div style ="float:left;margin-left: 20px;margin-bottom: 5px" markdown="1"> -->
+<!-- ![](Figures/Algorithm flowchart example.png){width=800px} -->
+<!-- </div> --></li>
+</ul>
+</div>
+<div id="results" class="section level1">
+<h1>Results</h1>
+<div class="figure"><span id="fig:fig3"></span>
+<img src="Figures/Diagnosis_ROCS.png" alt="Description of figure" width="95%" />
+<p class="caption">
+Figure 2: Description of figure
+</p>
+</div>
+<table>
+<thead>
+<tr class="header">
+<th align="left">Decision Rule</th>
+<th align="right">Clinician AUC</th>
+<th align="right">Patient AUC</th>
+<th align="right">Difference</th>
+<th align="left">95% CI</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">CF</td>
+<td align="right">0.794</td>
+<td align="right">0.703</td>
+<td align="right">0.091</td>
+<td align="left">(0.07 - 0.11)</td>
+</tr>
+<tr class="even">
+<td align="left">CFA</td>
+<td align="right">0.705</td>
+<td align="right">0.630</td>
+<td align="right">0.075</td>
+<td align="left">(0.056 - 0.094)</td>
+</tr>
+<tr class="odd">
+<td align="left">CFM</td>
+<td align="right">0.812</td>
+<td align="right">0.699</td>
+<td align="right">0.113</td>
+<td align="left">(0.091 - 0.135)</td>
+</tr>
+<tr class="even">
+<td align="left">Score</td>
+<td align="right">0.890</td>
+<td align="right">0.794</td>
+<td align="right">0.096</td>
+<td align="left">(0.079 - 0.114)</td>
+</tr>
+<tr class="odd">
+<td align="left">Tree</td>
+<td align="right">0.856</td>
+<td align="right">0.760</td>
+<td align="right">0.096</td>
+<td align="left">(0.076 - 0.116)</td>
+</tr>
+</tbody>
+</table>
+<div class="figure"><span id="fig:fig5"></span>
+<img src="Figures/Metrics.png" alt="Description of figure" width="90%" />
+<p class="caption">
+Figure 3: Description of figure
+</p>
+</div>
+<p><strong>Description of results</strong></p>
+<div class="figure"><span id="fig:fig6"></span>
+<img src="Figures/KappaPlot_c.png" alt="Description of figure" width="95%" />
+<p class="caption">
+Figure 4: Description of figure
+</p>
+</div>
+</div>
+<div id="conclusion" class="section level1">
+<h1>Conclusion</h1>
+<ul>
+<li>The performance of the clinical decision rules for the patient and clinician rules is statistically significant</li>
+<li>While the loss in accuracy from patient reported symptoms is statistically significant, the clinical significance needs to be evaluated in further studies</li>
+<li>The weighted flu score performed better than the simple heuristic rules for both patient and clinicians in our population</li>
+</ul>
+</div>
+<div id="acknowledgements" class="section level1">
+<h1>Acknowledgements</h1>
+<div class="special">
+<!-- *  -->
+</div>
+</div>
+<div id="references" class="section level1">
+<h1>References</h1>
+<div class="special">
+<!-- 1. Zarnitsyna VI, et al. 2016. *PLoS Pathog* 12(6):e1005692. -->
+<!-- 2. Ross TM, et al. 2014. *Hum Vaccin Immunother* 10(5):1195--1203. -->
+</div>
+</div>
+</div>
+</div>
+
+</div>
+
+
+
+</body>
+</html>

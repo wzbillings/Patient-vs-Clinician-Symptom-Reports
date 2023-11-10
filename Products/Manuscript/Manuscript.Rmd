@@ -1,0 +1,394 @@
+---
+title: |
+  Use of patient-reported symptom data in clinical decision rules for
+  predicting influenza in a telemedicine setting
+output:
+  bookdown::word_document2:
+    toc: false
+    number_sections: true
+    global_numbering: true
+    fig_caption: yes
+bibliography:
+  - "refs.bib"
+  - "pkgs.bib"
+  - "pkgs2.bib"
+  - "tree-refs.bib"
+csl: american-medical-association.csl
+---
+
+```{r setup, include = FALSE, echo = FALSE, cache.lazy = FALSE}
+# Setting options for the rest of the document
+knitr::opts_chunk$set(warning = FALSE, echo = FALSE, out.width = "100%",
+											out.height = "100%")
+
+# Rounding rules
+options(digits = 3)
+
+# Caption formatter
+format_cap <- function(str) {
+	out <-
+		str |>
+		gsub(pattern = "\t", replacement = "") |>
+		gsub(pattern = "\n", replacement = " ") 
+	return(out)
+}
+
+# Confidence interval formatter
+format_ci <- function(data, x, lwr, upr, CL = 95, digits = 2) {
+	paste0(
+		sprintf(paste0("%.", digits, "f"), data[[x]]), "; \\ ", CL,
+		"\\% \\ \\text{CI: }",
+		sprintf(paste0("%.", digits, "f"), data[[lwr]]), ", ",
+		sprintf(paste0("%.", digits, "f"), data[[upr]])
+	)
+}
+
+irr_df <- readRDS(here::here("Results", "Data", "symptoms_irr_df.Rds"))
+dx_agree <- readr::read_rds(here::here("Results",
+																			 "Data", "diagnosis-agreement-df.Rds"))
+
+# Flextable fitter
+fit_flextable_to_page <- function(ft, pgwidth = 6){
+
+  ft_out <- ft |> flextable::autofit()
+
+  ft_out <-
+  	flextable::width(
+  		ft_out,
+  		width = dim(ft_out)$widths*pgwidth /
+  			(flextable::flextable_dim(ft_out)$widths))
+  return(ft_out)
+}
+
+# Get the package references
+#zlib::write_renv_bib(here::here("Products", "Manuscript", "pkgs.bib"))
+#knitr::write_bib(file = here::here("Products", "Manuscript", "pkgs2.bib"))
+```
+
+# Authors and affiliation {-}
+
+W. Zane Billings, Department of Epidemiology and Biostatistics, University of Georgia, Athens, GA. ORCID: https://orcid.org/0000-0002-0184-6134
+
+Annika Cleven, Department of Mathematics, St. Olaf College, Northfield, MN
+
+Jacqueline Dworaczyk, Ira A. Fulton Schools of Engineering, Arizona State University, Tempe, AZ
+
+Ariella Perry Dale, PhD, MPH, Maricopa County Department of Public Health, Phoenix, AZ
+
+Mark Ebell, PhD, Department of Epidemiology and Biostatistics, University of Georgia, Athens, GA
+
+Brian McKay, PhD, Department of Family and Consumer Sciences, University of Georgia, Athens, GA. ORCID: https://orcid.org/0000-0003-3859-7634
+
+Andreas Handel, PhD, Department of Epidemiology and Biostatistics, University of Georgia, Athens, GA. ORCID: https://orcid.org/0000-0002-4622-1146
+
+**Abstract word count:** 241
+
+**Manuscript word count:** 3,253
+
+\newpage
+
+# Abstract {-}
+
+**Introduction**: Increased use of telemedicine could potentially streamline influenza diagnosis and reduce transmission. However, telemedicine diagnoses are dependent on accurate symptom reporting by patients. If patients disagree with clinicians on symptoms, previously-derived diagnostic rules may be inaccurate.
+
+**Methods**: We performed a secondary data analysis of a prospective, non-randomized cohort study at a university student health center. Patients who reported an upper respiratory complaint were required to report symptoms, and their clinician was required to report the same list of symptoms. We examined the performance of five previously-developed clinical decision rules (CDRs) for influenza on both symptom reports. These predictions were compared against PCR diagnoses. We analyzed the agreement between symptom reports, and we built new predictive models using both sets of data.
+
+**Results**: CDR performance was always lower for the patient-reported symptom data, compared to clinician-reported symptom data. CDRs often resulted in different predictions for the same individual, driven by disagreement in symptom reporting. We were able to fit new models to the patient-reported data, which performed slightly worse than previously-derived CDRs. These models and models built on clinician-reported data both suffered from calibration issues.
+
+**Discussion**: Patients and clinicians frequently disagree about symptom presence, which leads to reduced accuracy when CDRs built with clinician data are applied to patient-reported symptoms. Predictive models using patient-reported symptom data performed worse than models using clinician-reported data and prior results in the literature. However, the differences are minor, and developing new models with more data may be possible.
+
+
+\newpage
+
+# Introduction
+
+Influenza causes disease in millions of individuals, including hundreds of thousands of hospitalizations, every year in the United States alone. [@rolfes2018] Globally, seasonal influenza is estimated to cause hundreds of thousands of deaths each year, disproportionately affecting the elderly. [@iuliano2018]
+
+Clinical decision rules (CDRs, also called clinical decision rules) are tools used by physicians to diagnose patients based on observable evidence. [@mcisaac2000; @pulmonary2006; @wells2006; @ebell2021] Since many of these CDRs are based on signs and symptoms which can be observed by patients, CDRs may be a useful tool for remote forward triage services. However, patients and clinicians can disagree on what symptoms are present. [@mccoul2019; @schwartz2021; @xu2004; @barbara2012] Most CDRs based on signs and symptoms were designed using clinician-reported data. The usefulness of these rules for remote triage therefore depends on whether patients can accurately provide necessary information. Robust forward triage systems have the potential to reduce burden on the healthcare system, but to our knowledge, no one has studied whether these rules are valid in a remote healthcare context
+
+<!--However, pandemic influenza is more deadly [@spreeuwenberg2018; @johnson2002; @shrestha2011] and tends to have an exceptionally high burden of disease in otherwise healthy people. [@simonsen1998; @jain2009; @dawood2012] As influenza continues to mutate, preparing for future outbreaks is a critical public health concern.-->
+
+<!-- Recommendations to develop new influenza triage protocols existed prior to the 2009 H1N1 pandemic, [@challen2007] but
+Future influenza pandemics are predicted to overwhelm healthcare infrastructure, [@kain2019]
+
+-->
+
+The recent rise in telemedicine may provide unique opportunities to reduce influenza transmission during epidemics [@colbert2020; @gupta2021], as well as improve surveillance, [@blozik2012; @lucero-obusan2017] diagnosis, [@choo2020] and treatment. [@xiao2021] Virtual visits are becoming more popular, and can improve the quality and equity of healthcare. [@duffy2018] Implementing forward triage systems, which sort patients into risk groups before any in-person healthcare visits, through telemedicine can leverage these advantages, especially if automated systems are implemented. Patients who have low risk could be recommended to stay home, rather than seeking in-person healthcare services. [@duffy2018; @pauker1980; @ebell2015] Screening out these low risk patients reduces the potential contacts for infected individuals receiving in-person healthcare, potentially reducing transmission during an epidemic. [@rothberg2020; @hautz2021]
+
+In our analysis, we evaluated several previously developed CDRs for the diagnosis of influenza to see how they performed for both clinician and patient-reported symptoms. We then examined differences between symptom reports by patients and by clinicians to determine if disagreement was a major factor in determining differences in CDR performance. Finally, we fit similar models to patient-reported symptom data to determine if updated CDRs would be beneficial for triage. More accurate CDRs for triage could reduce the burden of influenza, by reducing transmission and improving treatment.
+
+
+<!--We find that patient-reported data yield less accurate predictions when previously-developed CDRs are used. New models trained to patient data, and developing more accurate influenza diagnostic methods for a telemedicine context may be critical for management of upcoming influenza pandemics.-->
+
+```{r process agreement data}
+da <-
+	dx_agree |>
+	dplyr::filter(
+		method == "pcr",
+		statistic %in% c("percent agreement", "AUC")
+	) |>
+	dplyr::mutate(
+		dplyr::across(
+			tidyselect:::where(is.numeric),
+			\(x) sprintf("%.2f", x)
+		)
+	)
+```
+
+
+# Methods
+
+## Collection and preparation of data
+
+```{r counting}
+tbl_data <- readRDS(here::here("Data", "Clean-Data", "Symptoms-Long.Rds")) |>
+	dplyr::select(method, unique_visit) |>
+	dplyr::distinct() |>
+	dplyr::count(method)
+
+sex_tab <- table(readRDS(here::here("Results/Data/sex.Rds")))
+ages <- readRDS(here::here("Results/Data/age.Rds"))
+```
+
+The data used in this secondary analysis were collected from a university health center from December 2016 through February 2017. Patients with an upper respiratory complaint were filled out a questionnaire before their visit, and indicated the presence or absence of several symptoms. Patients were required to answer all questions on the survey. At the time of the visit, a clinician was required to mark the same symptoms as present or absent. Previous publications detail the study design and data collection methods. [@dale2018; @dale2019] A total of 19 symptoms and the duration of illness were assessed by both the clinician and patient. Duration of illness was collected as free text data, so we recoded this variable as a dichotomous indicator of whether the onset of disease was less than 48 hours prior to the clinic visit, which we called acute onset. Going forward, when we say "symptom," we include acute onset as well.
+
+In our study sample, all patients received a diagnosis from the clinician, but some additionally received a PCR diagnosis. Clinicians in our study were not blinded to lab results before making a diagnosis, but still sometimes disagreed with PCR results (see Appendix). Since PCR is considered the "gold standard" of viral diagnoses, [@merckx2017] we elected to use the PCR subset for our analyses. The PCR tested for both influenza A and influenza B, and we report the number of observed cases of each type. In all of our following analyses we combined influenza A and B cases, which is consistent with the methodology of previous studies. [@ebell2012; @afonso2012]
+
+<!--Pooling both types of influenza makes our results more useful to clinicians, as a physician attempting to diagnose influenza without a lab test does not make a distinction between the two types. The distinction is less important in the context of remote triage, since treatment options are the same for both -->
+
+We estimated the prevalence of each symptom as reported by clinicians and by patients in the overall group, as well as stratified by diagnosis. We also report descriptive statistics for age and sex, which were collected for the PCR subset of the study.
+
+## Evaluation of clinical decision rules
+
+We applied several CDRs to both patient-reported and clinician-reported symptom data. We chose to apply five CDRs in total that could be used by a clinician or implemented as part of a telemedicine screening service. We used three heuristic decision rules: presence of both cough and fever (CF); presence of cough and fever with acute onset of disease (CFA); and presence of cough, fever, and myalgia all simultaneously (CFM). [@govaert1998; @monto2000] We also used a weighted score rule derived from a logistic regression model (WS), which included both fever and cough simultaneously, acute onset, myalgia, chills or sweats; [@ebell2012] and a decision tree model (TM) , which included fever, acute onset, cough, and chills or sweats. [@afonso2012]
+
+The three heuristic rules all produce binary outcomes, assigning a patient to the high risk group if they display all indicated criteria, or the low risk group otherwise. The score and tree both produce numerical probabilities of predicted risk, which were converted into risk groups using pre-defined thresholds. Patients with risk below 10% (the testing threshold) were assigned to the low risk group, patients with risk below 50% (the treatment threshold) were assigned to the moderate risk group, and patients with risk at least 50% or greater were assigned to the high risk group, following a standard model of threshold diagnosis. [@ebell2012; @pauker1980] As a sensitivity analysis, we varied these thresholds (shown in the Appendix). We compared the performance in our data to previously-reported performance metrics. [@ebell2021] For the heuristic rules, AUROCC (equivalent to balanced accuracy in the case of binary predictions) values were derived from the sensitivity and specificity reported in the original paper. [@monto2000] For the WS, AUROCC was taken from a previous external validation and was calculated on the entire set of patients. [@ebell2021; @vanvugt2015] For the TM, AUROCC was calculated from the validation set. [@afonso2012]
+
+We evaluated the agreement between patient and clinician symptom reporting using unweighted Cohen's kappa. [@cohen1960] Qualitative assessment of agreement using the kappa estimates was based on previously published guidelines for use in medical settings [@mchugh2012]. As a sensitivity analysis, we calculated the percent agreement, the prevalence-and-bias-adjusted kappa (PABAK) [@byrt1993], Gwet's AC1 statistic [@gwet2008; @gwet2015], and Krippendorff's alpha statistic [@gwet2015; @zapf2016] (shown in the Appendix). We calculated 95% confidence intervals for these statistics using the empirical percentiles of the statistic of interest calculated on 10,000 bootstrap resamples. [@davison1997a, @R-boot]
+
+<!--  Patients and clinicians were considered independent raters of the patient's true clinical state. Both raters marked each symptom as present or absent only, making Cohen's kappa an appropriate statistic for the assessment of agreement between raters. -->
+
+## Developing new prediction models
+
+We assessed whether patient-reported symptom data could be used to build CDRs with better performance. We fit new models separately to the patient-reported and clinician-reported data. To better assess the performance of our new models, we divided our data into 70% derivation and 30% validation subgroups. Sampling for the data split was stratified by influenza diagnosis to ensure the prevalence of both groups was similar to the overall prevalence.
+
+To develop a weighted score, we used several variable selection methods to fit models, and selected our final model based on AIC, *a priori* important symptoms, and parsimony. We fit a multivariable logistic regression model with diagnosis predicted by the selected variables, and rounded the coefficients to the nearest half (coefficients were doubled if rounding resulted in half-points). We fit a secondary logistic regression model with diagnosis predicted only by the score to estimate the risk associated with each score value.
+
+We considered four different tree-building algorithms to construct a decision tree model: recursive partitioning (CART) [@R-rpart; @breiman1984], fast-and-frugal tree [@R-FFTrees; @phillips2017], conditional inference [@R-partykit; @hothorn2015; @hothorn2006], and C5.0 [@R-C50; @quinlan1993; @kuhn2013]. We then selected the best tree using Area Under the Receiver Operating Characteristic Curve (AUROCC) and parsimony. We did not manually prune or adjust trees.
+
+Finally, we fit several machine learning models, which are less interpretable but often more powerful. We used 10-fold cross-validation repeated 100 times on the derivation set to train the models. We evaluated the performance of all models using AUROCC. All models were trained only on the derivation set, and performance was estimated on both the derivation set and the validation set separately. The Appendix contains more details on our methodology.
+
+## Implementation
+
+As this is a secondary data analysis, we did not conduct any formal statistical tests. The study was not designed to power our questions, and any tests would have inflated Type-1 error rates. Therefore, we did not conduct any formal hypothesis tests in our analysis.
+
+All analyses, figures, and tables were completed in `r version$version.string` [@R-base] using the `boot` package [@R-boot; @davison1997a], and several packages from the `tidyverse` suite [@tidyverse2019; @ggplot22016; @R-tidyverse; @R-tidyr; @R-tibble; @R-purrr; @R-ggplot2; @R-forcats; @R-dplyr]. We fitted our models using the `tidymodels` infrastructure [@tidymodels2020; @R-tidymodels; @R-rsample; @R-recipes; @R-parsnip; @R-tune; @R-yardstick; @R-workflows; @R-workflowsets; @R-dials]. The manuscript was prepared using `R` markdown with the `bookdown` package [@R-rmarkdown; @R-bookdown; @rmarkdown2018; @rmarkdown2020]. Tables were generated with `gtsummary` [@R-gtsummary] and `flextable` [@R-flextable]. Figures were generated with `ggplot2` [@R-ggplot2; @wickham2016].
+
+In the Appendix, we provide detailed session information (including a list of packages and versions), all necessary code and data, and instructions for reproducing our analysis.
+
+# Results
+
+## Descriptive analysis
+
+In total, there were $n = 250$ patients in our study with symptom reports and a PCR diagnosis. The prevalence in our data was about $51%$ ($127$ out of $250$ patients), with $118$ cases of Influenza A and $9$ cases of influenza B. There were slightly more females $(`r sex_tab[["F"]]`)$ than males $(`r sex_tab[["M"]]`)$ in the group, and most participants were young adults. Only $`r mean(ages > 22) |> round(2) * 100` \%$ of participants were older than $22$.
+
+<!--
+```{r Subgroups}
+cap <- {
+	"The number of participants who had positive and negative PCR diagnoses,
+	and the age and sex distributions of participants."
+}
+
+readRDS(here::here("Results", "Tables", "table_one.Rds")) |>
+	gtsummary::modify_caption(caption = format_cap(cap)) |>
+	gtsummary::as_flex_table() |>
+	flextable::line_spacing(space = 0.55, part = "body") |>
+	flextable::fit_to_width(max_width = 6)
+```
+-->
+
+The prevalence of each symptom is shown in Table \@ref(tab:Prevalences). Patients tended to report more symptoms than clinicians. Cough and fatigue were slightly more common in influenza positive patients, while chills/sweats and subjective fever were much more common in influenza positive patients. No symptoms were more common in influenza negative patients. Overall, clinicians reported several symptoms less commonly than patients: chest congestion, chest pain, ear pain, shortness of breath, and sneezing. Physicians were more likely to report fever, runny nose, and pharyngitis. Some symptoms also show interaction effects between the rater and the diagnosis. (I.e., one rater was more likely to report a symptom, but only in one diagnosis group.) For example, clinicians more commonly reported eye pain in influenza positive patients, and less commonly reported headache in influenza negative patients.
+
+```{r Prevalences}
+cap <- {
+	"Prevalence of each symptom as reported by clinicians and patients. We
+	calculated the prevalence of each symptom in the overall subsample, as well
+	as stratified by influenza diagnosis. The table shows the number of 
+	participants positive (point prevalence) for all symptoms, and the median 
+	(range) for the total number of symptoms."
+}
+
+readRDS(here::here("Results", "Tables", "pcr_symptom_prevalence.Rds")) |>
+	gtsummary::as_flex_table() |>
+	flextable::set_caption(caption = format_cap(cap)) |>
+	flextable::fontsize(size = 10, part = "all") |>
+	flextable::autofit() |>
+	flextable::width(j = 1, width = 1) |>
+	flextable::width(j = 2:7, width = (5/6))
+```
+
+## Evaluation of previous influenza CDRs
+
+Table \@ref(tab:CDRs) shows the five CDRs we applied (CF, CFA, CFM; [@monto2000] WS; [@ebell2012] and TM [@afonso2012]), the symptoms they use, and the previously reported AUROCC for each CDR. The table also shows the AUROCC when the rule was used to make predictions with the patient and clinician reported symptoms. A CDR that makes perfect predictions would have an AUROCC of 1, while random guessing would have an AUROCC of 0.5.
+
+```{r CDRs}
+cap <- {
+	"Details on previously developed CDRs along with prior reported AUROCC. We show AUROCC values reported in previous studies, along with the AUROCC values when our clinician-reported data and patient-reported data are used in the CDRs and compared to the true PCR diagnoses."
+}
+
+readRDS(here::here("Results", "Tables", "CDR-Assessment.Rds")) |>
+	flextable::set_caption(format_cap(cap)) |>
+	flextable::fontsize(size = 10, part = "all") |>
+	flextable::autofit() |>
+	fit_flextable_to_page() |>
+	flextable::width(j = 1, width = 0.5)
+```
+
+The CFA and TM rules performed worse on our data, while the CF, CFM, and WS rules performed slightly better. The WS rule was the best performing rule using the clinician-reported symptom data, while multiple rules (WS, TM, and CF) performed similarly on the patient data. Every score performed worse when the patient-reported symptoms were used, but any CDR that performed better than previously reported was still better when the patient-reported data were used. The drop in performance was small for most rules: CF, CFA, and the tree model were only slightly different from the clinician-reported symptom metrics. There was a substantive drop in performance for the CFM rule and the SM.
+
+<!--We intended to judge the performances of CDRs against the performance of clinicians in our  study (which had a high AUC of `r da[[2, 3]]` for predicting PCR diagnoses), but clinicians were not blinded to the result of laboratory tests before they made a final diagnosis.-->
+
+## Analysis of CDR agreement
+
+```{r HeuristicsData}
+heur_dat <-
+	readRDS(here::here("Results/Data/heurisics_agreement.Rds"))
+kappas <-
+	dplyr::filter(
+		heur_dat,
+		statistic == "Cohen's kappa",
+		method == "pcr"
+	)
+```
+
+To investigate the differences between patient-based and clinician-based CDR performance, we assessed the agreement between the their predictions. For the three discrete heuristic CDRs, we obtained Cohen's kappa values of $\kappa = `r dplyr::filter(kappas, CPR == "CF") |> format_ci("estimate", "lower", "upper")`$ for CF, $\kappa = `r dplyr::filter(kappas, CPR == "CFA") |> format_ci("estimate", "lower", "upper")`$ for CFA, and $\kappa = `r dplyr::filter(kappas, CPR == "CFM") |> format_ci("estimate", "lower", "upper")`$ for CFM. All of the kappa values represent a moderate level of agreement. [@mchugh2012] Table \@ref(tab:HeurCont) shows the contingency tables for each of the heuristic rules with the PCR diagnosis. Patients had a slightly lower accuracy for each of the three rules, despite a higher specificity (true negative rate). Clinicians had a higher sensitivity (true positive rate) for all three rules.
+
+```{r HeurCont}
+cap <- {
+	"Number of patients who were predicted to have influenza by each of the three
+	heuristic CDRs, which produce binary outcomes. The predictions are stratified
+	by PCR influenza diagnosis."
+}
+
+readRDS(here::here("Results", "Tables", "heuristics_contigency_table.Rds")) |>
+	flextable::set_caption(format_cap(cap)) |>
+	flextable::fontsize(size = 10, part = "all") |>
+	flextable::autofit(add_w = 0, add_h = 0)
+```
+
+Rather than discretizing the predictions from the WS and TM, we visually assessed the correlation between the results from clinician-reported and patient-reported symptoms (Figure \@ref(fig:CDRCorr)). Most of the scores tended to be large, and patients and clinicians tended to agree more on larger scores. For the TM, patients and clinicians were also likely to agree when the model predicted its minimum value for a patient.
+
+```{r CDRCorr}
+#| fig.cap: "Clinician vs. patient scores for both of the continuous CDRs.
+#| The CDRs only have a discrete set of outputs, so the size and color of the
+#| points reflects the number of patients (overlapping observations) at each
+#| location. If the models agreed perfectly, all observations would fall on
+#| the dashed line."
+#| out.width: "100%"
+knitr::include_graphics(
+	path = here::here("Results/Figures/score_agreement_panel.tiff")
+)
+```
+
+## Assessment of interrater agreement
+
+To understand the disagreement in CDR predictions between patient-reported and clinician-reported data, we examined the agreement between clinician and patient symptom reports. Figure \@ref(fig:Kappas) shows the calculated Cohen's kappa statistics and confidence intervals for each symptom. The only symptom which achieved moderate agreement was acute onset ($\kappa = `r irr_df |> dplyr::filter(statistic == "Cohen's kappa", symptom == "Acute Onset", method == "pcr") |> format_ci("estimate", "lower", "upper")`$), according to the clinical guidelines. Symptoms with weak agree were cough ($\kappa = `r irr_df |> dplyr::filter(statistic == "Cohen's kappa", symptom == "Cough", method == "pcr") |> format_ci("estimate", "lower", "upper")`$), chills and sweats ($\kappa = `r irr_df |> dplyr::filter(statistic == "Cohen's kappa", symptom == "Chills Sweats", method == "pcr") |> format_ci("estimate", "lower", "upper")`$) and subjective fever ($\kappa = `r irr_df |> dplyr::filter(statistic == "Cohen's kappa", symptom == "Subjective Fever", method == "pcr") |> format_ci("estimate", "lower", "upper")`$), which were common across the CDRs we used. However myalgia (minimal agreement; $\kappa = `r irr_df |> dplyr::filter(statistic == "Cohen's kappa", symptom == "Myalgia", method == "pcr") |> format_ci("estimate", "lower", "upper")`$) was also included in some of the CDRs.
+
+Patients tended to report a higher number of symptoms overall (Figure \@ref(fig:CDRCorr)), including symptoms which were rarely reported by physicians like tooth pain, and symptoms with specific clinical definitions like swollen lymph nodes and chest congestion (Table \@ref(tab:Prevalences)). Patients also were less likely to report certain symptoms, including pharyngitis, runny nose, and nasal congestion. These discrepancies occur for symptoms with lower Cohen's kappa values. However, patients and physicians were about equally likely to report acute onset, supported by a higher kappa value.
+
+In our sensitivity analysis using other measurements of inter-rater agreement, there were no qualitative differences when using other kappa-based statistics. Krippendorff's alpha showed inconsistent trends.
+
+```{r Kappas}
+#| fig.cap: "Cohen's kappa values for each symptom. Cohen's kappa was used to 
+#| measure agreement between clinician diagnoses and the lab test methods. 
+#| Qualitative agreement categories were assigned based on previously published 
+#| guidelines for clinical research."
+#| out.width: "100%"
+knitr::include_graphics(
+	path = here::here("Results/Figures/pcr_kappa_plot.tiff")
+)
+```
+
+## Development of new models
+
+The differences between patient-reported and clinician-reported symptoms, and subsequent differences in CDR performance, suggest that CDRs developed sing patient data might perform better than previous scores developing using clinician-reported data. We built new models using the patient-reported data by emulating the previously developed rules. We selected a point score, a decision tree, and a machine learning algorithm for further examination. We split the data into a derivation set of $176$ patients, and a validation set of the remaining $74$ patients. All models were trained only on the derivation set.
+
+Based on our selection criteria, the best score model used symptoms selected via LASSO penalization [@tibshirani1996]. The score model contained the symptoms chills or sweats (2 points), cough (5 points), and fever (4 points). The tree we selected was a conditional inference tree containing the variables fever, shortness of breath, wheeze, and cough. Out of the machine learning models we fit, we selected a naive Bayes classification model, which performed competitively on both the clinician-data and patient-data models, and included all symptoms. For comparison, we applied the same modeling procedures to the clinician-reported symptom date. (See Appendix for modeling details.)
+
+Table \@ref(tab:ModelPerf) shows the AUROCC of each of the selected models, using the clinician and the patient data. When trained on the clinician-reported data, the score and naive Bayes models performed better on both the derivation and validation sets than when trained on the patient-reported data. The conditional inference tree performed better on the validation group but worse on the derivation group when trained on the clinician data.
+
+```{r ModelPerf}
+cap <- {
+	"Derivation set and validation set AUROCC for each of the three selected
+	models, trained and evaluated on either the clinician or patient data. The
+	same individuals were used in the derivation and validation sets regardless
+	of whether the clinician-reported symptom data or patient-reported symptom
+	data were used for modeling."
+}
+
+readRDS(here::here("Results", "Tables", "Model-AUC-Tab.Rds")) |>
+	flextable::set_caption(format_cap(cap)) |>
+	flextable::fontsize(size = 10, part = "all") |>
+	flextable::autofit(add_w = 0, add_h = 0)
+```
+
+When trained to the patient-reported symptom data, all three models performed well on the derivation group, but their performance dropped substantially on the validation group. The validation group performance estimates the performance on new data, so all three models are likely overfit. The naive Bayes model appeared to overfit the least.
+
+We examined the quantitative risk predictions made by the models, categorizing patients with risk $\leq10\%$ as low risk, patients with risk $>10\%$ but $\leq50\%$ as medium risk, and patients with risk $>50\%$ as high risk. All three models assigned over half of the study participants to the high-risk group, and almost none to the low-risk group (Table \@ref(tab:Pt-RG)). Patients in the high-risk group are recommended to seek in-person care in the context of a telemedicine forward triage system.
+
+```{r Pt-RG}
+cap <- {
+	"Risk group statistics for the models built using the patient data. The models
+	were trained using the derivation set of patient-reported symptom data, and
+	evaluated on both the derivation and validation sets separately. We obtained
+	quantiative risk predictions for each individual from the models, and
+	assigned individuals with a risk less than 10% to the low risk group,
+	individuals with a risk between 10% and 50% to the moderate risk group, and
+	individuals with a risk greater than 50% to the high risk group.
+	LR: stratum-specific likelihood ratio."
+}
+
+readRDS(here::here("Results", "Tables", "Risk-Groups-Table-Pt.Rds")) |>
+	flextable::set_caption(format_cap(cap)) |>
+	flextable::fontsize(size = 10, part = "all") |>
+	flextable::autofit(add_w = 0, add_h = 0)
+```
+
+If we increase the thresholds for risk groups, a few more patients are classified as
+low or moderate risk. For the patient data models, the majority of patients
+remain in the high risk group. As a sensitivity analysis, we used the same procedures to fit models to the clinician-reported data. While models fit to the clinician data were slightly better at identifying low- and medium-risk patients, the majority of patients were still placed in the high risk group by these models (see Appendix).
+
+# Discussion
+
+We found that previously-developed CDRs perform less well when used with patient-reported symptom data, as opposed to clinician-reported symptom data. Our analysis implies that patient-reported symptom data are likely to be less reliable for influenza triage than clinician-reported symptom data. We observed notable disagreement in many influenza-like illness symptoms, which may explain this discrepancy. Neither the previously-developed CDRs, nor our new models fit to the patient-reported data could achieve the same performance with patient-reported symptom data as the best models using the clinician-reported data. However, evaluating the magnitude of these differences is difficult, and further evaluation (e.g., a cost-benefit analysis) is necessary to determine whether the difference in predictive power of the models is meaningful in clinical practice.
+
+As clinicians train for several years to identify signs and symptoms of illness, our results may not be surprising. One previous study identified that patients and clinicians defined "chest congestion" differently [@mccoul2019], and similar discrepancies might exist with other symptoms. The design of the questionnaire could potentially be modified to better capture the information that would be gained by a clinician's assessment of the patient. Patients also tended to report more symptoms, which could point to issues with the questionnaire designed. All patients in our study were those who sought out healthcare and wanted to see a clinician, which may bias the reporting of symptoms. This bias might be present in a telemedicine triage context as well.
+
+Our study was limited by a small sample size with accurate diagnoses. The small sample size makes fitting predictive models difficult, and a larger sample with accurate reference standards might be useful for developing predictive models from patient-reported symptom data. Our study sample was also composed of young adults aged 18 -- 25 living on a college campus. Our sample is likely unrepresentative of the general population, and our results may reflect a healthy worker bias. Young adults who are able to attend college are typically at low risk for influenza complications, and our study sample is biased towards less severe cases of influenza, which may be more difficult to distinguish from other non-severe ILIs (e.g. rhinovirus or RSV). This bias could explain our issues with model calibration in the low risk group -- without any truly high risk patients in our sample, the risk predictions cannot be accurately calibrated. More demographic variation in future studies would also allow for known risk factors like age to be implemented in influenza risk models.
+
+Analyzing the model goodness-of-fit using risk group predictions reveals further questions. Inclusion criteria for our study population included seeking healthcare and presenting with at least two symptoms, so potentially every member of our population is at high risk of influenza. The distribution of risk estimates in our population indicates that patient-reported CDRs might be viable in other populations which is more likely to feature diverse "true" risks of influenza across individuals.
+
+Furthermore, combining patient-reported questionnaires with home rapid testing may provide a viable alternative to prediction methods based only on symptom data [@cai2022]. While rapid tests have a high false negative rate, they are cheap (compared to PCR testing), easy to use, and may provide more objective information. Combining rapid tests with symptom questionnaires and CDRs that are optimized for detection of low-risk cases may counterbalance the low sensitivity of the test.
+
+<!--
+Rapid testing may play a prominent role in distinguishing influenza from co-circulating SARS-CoV-2. SARS-CoV-2 and influenza have substantial overlap between symptoms, and COVID-19 disease may have higher risk of complications. For example, loss of taste or smell was not included as a symptom in our data, or in any of these models (as they predate the pandemic), but may be an important factor in discriminating between influenza disease and COVID-19. If decision rules cannot be modified to sufficiently rule out COVID-19, rapid testing for either COVID-19 or influenza may become an integral part of telemedicine triage.
+-->
+
+In conclusion, we find that patient-reported symptom data is less accurate than clinician-reported symptom data for predicting influenza cases using CDRs. Clinical evaluation is needed to determine whether the difference in performance is meaningful in a real-world context. We recommend repeating our analyses on a larger, more representative sample to determine if our conclusions hold in a general population, and evaluating these predictions in practice. Building new CDRs from patient data on a larger sample, or combining patient-reported data with home testing could potentially improve the accuracy of predictions from patient-reported data. Regardless, improving remote triage for telemedicine cases is critical to prepare public health infrastructure for upcoming influenza pandemics. These CDRs may be a cost-effective tool for combating future influenza epidemics given further development.
+
+# Acknowledgments {-}
+
+ZB was funded by the University of Georgia Graduate School. AC and JD were
+funded by National Science Foundation grant #1659683 through the Population
+Biology of Infectious Diseases Research Experience for Undergraduates site. AH
+acknowledges partial support from NIH grants AI170116 and U01AI150747, and
+contracts 75N93019C00052 and 75N93021C00018. We thank the Infectious Disease
+Epidemiology Research Group at the University of Georgia for feedback on our
+research.
+
+# References {-}
+
+
+
+
+

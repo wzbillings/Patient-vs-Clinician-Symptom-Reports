@@ -1,0 +1,189 @@
+---
+title: 'Symptom Agreement Project Report'
+author: W. Zane Billings, Annika Cleven, Jacqueline Dworaczyk, Brian McKay, Ariella Perry Dale, Mark Ebell, Andreas Handel
+output:
+  bookdown::word_document2:
+    toc: false
+  fig_caption: yes
+#bibliography:
+  #- "packages.bib"
+  #- "http://127.0.0.1:23119/better-bibtex/export/collection?/2/GC22N8WI.bibtex"
+csl: american-medical-association.csl
+abstract: |
+  This is a complete write-up of all the work that was done as part of the Symptom Agreement project. I (Zane) was having trouble writing the manuscript, so decided to complete a full writeup of all of our results and methods while Annika was still here. (Unfortunately we got delayed when Zane got COVID.) This will document everything that we have as a finished figure or table to aid in choosing what should be reported in the manuscript. This could potentially also be used by anyone who wants to work on this data in the future.
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include = FALSE, echo = FALSE, cache.lazy = FALSE}
+invisible(require("markdown")) #for renv
+# Setting options for the rest of the document
+knitr::opts_chunk$set(warning = FALSE, echo = FALSE, out.width = "100%")
+
+# Rounding rules
+options(digits = 3)
+
+# Caption formatter
+format_cap <- function(str) {
+	out <-
+		str |>
+		gsub(pattern = "\t", replacement = "") |>
+		gsub(pattern = "\n", replacement = " ") 
+	return(out)
+}
+```
+
+**Do patients report symptoms differently from clinicians, and if so, do these differences have a noticeable impact on influenza diagnosis?**
+
+# Background
+
+Our research question is specifically motivated by a context of telemedicine and triage: if a patient can make a telemedicine appointment and receive a negative diagnosis, they do not need to come into the office, reducing the burden on the healthcare system. The triage system is motivated by the threshold model of diagnosis [@pauker1980].
+
+Using Mark's UHC data that Ariella used for her thesis, we wanted to first examine the agreement between patient-reported and clinician-reported symptoms. (Note that many clinicians were not physicians, but were medical professionals such as nurses and NPs.) After this, we noticed that many clinician prediction rules were based on clinician-reported symptoms, so we theorized that if patients and clinicians often disagree on their symptoms, these clinical prediction rules might fail when patient-reported symptom data was fed into them. For the "true" diagnosis, we had a subsample with PCR and a (mutually exclusive) subsample with RADT, so we decided to check PCR, RADT, PCR or RADT, and clinician diagnosis.
+
+Then, we decided to build new, similar models using the patient data.
+
+# Diagnosis Agreement
+
+While we had almost 2500 observations in the full data set, many of these patients only received a clinician diagnosis. A much smaller subsample recieved a PCR or RADT diagnostic test. The number of subjects recieving each type of diagnosis, and the proportion of positive and negative diagnoses within each subsample is shown in Table \@ref(tab:DxSubsamplesTable).
+
+```{r DxSubsamplesTable}
+cap <- {
+	"The number of participants who recieved each type of diagnosis, along with,
+	the proportion of positive and negative flu diagnoses of each type. The
+	clinician diagnosis referred to the final diagnosis by the healthcare, who
+	was not blinded to the results of the tests. PCR: Reverse transcriptase
+	polymerase chain reaction. RADT: rapid antigen detection test. Test: combined
+	results from the PCR and RADT subsamples, which were mutually exclusive."
+}
+
+readRDS(here::here("Results", "Tables", "table_one.Rds")) |>
+	gtsummary::modify_caption(caption = format_cap(cap)) |>
+	gtsummary::as_kable()
+```
+
+As you can see, clinicians were less likely to diagnose patients with flu than either of the lab tests. PCR and RADT show surprisingly similar diagnostic levels. Unfortunately, since the PCR and RADT subsamples are mutually exclusive, we cannot directly compare agreement between the two methods. However, we used a battery of interrater agreement statistics to measure the agreement between the clinician diagnoses and the three subsamples. The Cohen's kappa values are shown in Figure \@ref(fig:DxAgreementKappas).
+
+```{r DxAgreementKappas}
+#| fig.cap: "Cohen's kappa was used to measure agreement between clinician
+#| diagnoses and the lab test methods. Qualitative agreement categories were
+#| assigned based on previously published guidelines for clinical research."
+#| out.width: "6in"
+knitr::include_graphics(
+	path = here::here("Results/Figures/dx_agreement_kappa_plot.tiff")
+)
+```
+
+However, the "paradox of kappa" is a well-established phenomenon: when the variance in responses is low, despite the fact that the raters agree almost every time. That is, if almost all diagnoses truly are "No", then kappa will be deflated, even if the reviewers agree 100% of the time. In the case of our diagnoses, since the PCR results gave a prevalence of about 50%, this should be less of an issue. However, we also calculated several additional statistics, shown in Figurwe \@ref(fig:DxAgreementPanel). 
+
+```{r DxAgreementPanel}
+#| fig.cap: "We considered several alternative statistics to Cohen's kappa, due
+#| to the so-called 'paradox of kappa.' Gwet's AC1 and the Prevalence-and-Bias
+#| Adjusted Kappa (PABAK) were both developed to help address the issue of
+#| interpreting kappa. We also compute Krippendorff's Alpha, a measure which is
+#| based on disagreements rather than on agreements, and the percentage agreement,
+#| which does not adjust for random chance."
+#| out.width: "6in"
+knitr::include_graphics(
+	path = here::here("Results/Figures/dx_agreement_panel_plot.tiff")
+)
+```
+
+For these data, the Cohen's kappa results seem similar to the results from the other four statistics. Each statistic reports that clinicians agree with PCR, and more often disagree with RADT. This is likely because clinicians were not blinded to test results. PCR is known to be incredibly accurate, while RADT has a reputation for inaccuracy (although it should be noted that positive rapid tests are highly accurate), so it is likely that clinicians usually agreed with the PCR result, but relied on their own judgement when presented with a rapid test result.
+
+Given that the highest level of agreement, based on the guidelines for clinical interpretations of Cohen's kappa (CITE) is only moderate, using only lab tests results as the "true" values seems prudent, although we will compare the different diagnostic methods as a potential sensitivity analysis. If the results based on clinician diagnoses are not that different from results based on PCR diagnoses, perhaps this discrepancy is less important in practice (although I personally thought we would see worse results using the clinician diagnoses due to the high prevalence of negative diagnoses).
+
+# Symptom Agreement
+
+The original namesake of this project! The original motivation of this project was to determine whether clinicians and patients agreed on what symptoms the patient is presenting. We consider the patient to have a "true clinical state", or a true set of signs and symptoms that they are experiencing. Both the clinician and the patient record imperfect observations of the true clinical state, and then, for each reported symptom, we compared the agreement between patients and clinicians. We also considered the number of symptoms presented by the patient, as well as whether the disease was noted as having an acute onset (<= 48 hours prior to the clinic visit).
+
+## Descriptive statistics
+
+Statistics on the total number of symptoms reported by patients and clinicians, and the average agreement per patient are reported in Table \@ref(tab:AgreementPerPatient). The average agreement per patient was computed as the number of symptoms the patient and doctor agreed on divided by the total number of symptoms. We then calculated the population average with 95% bootstrap CI.
+
+```{r AgreementPerPatient}
+cap <- {
+	"The mean proportion of symptoms upon which the clinician and patient agree,
+	with a 95% bootstrap confidence interval."
+}
+
+readRDS(here::here("Results", "Tables",
+									 "agreement_per_person.Rds")) |>
+	knitr::kable(caption = format_cap(cap))
+```
+
+The prevalence of symptoms, as reported by patients and clinicians, is shown in Table \@ref(tab:SymptomPrevalence). The number of symptoms reported as well as whether the onset of disease was reported as acute (<= 48 hours) are also shown in the table.
+
+```{r SymptomPrevalence}
+cap <- {
+	"The prevalence of each symptom in our population is shown, as reported by
+	both patients and clinicians. Prevalences were computed for each subsample
+	that recieved a specific diagnosis method."
+}
+
+readRDS(here::here("Results", "Tables",
+									 "all_outcomes_symptom_prevalence.Rds")) |>
+	gtsummary::modify_caption(caption = format_cap(cap)) |>
+	gtsummary::as_kable()
+```
+
+## Interrater agreement (full sample)
+
+To assess the agreement between clinicians and patients for each symptom, we initially used Cohen's kappa statistic. The Cohen's kappa results are reported in Figure \@ref(fig:IRRKappa).
+
+```{r IRRKappa}
+#| fig.cap: "Cohen's kappa values computed for each symptom, where the doctor
+#| and the patient were considered independent raters. Note that the highest
+#| level of qualitative agreement according to the previously published clinical
+#| guidelines is moderate."
+#| out.width: "6in"
+knitr::include_graphics(
+	path = here::here("Results/Figures/all_kappa_plot.tiff")
+)
+```
+
+Again due to the noted issues with interpretation of kappa, we computed additional summary statistics which are shown in Figure \@ref(fig:IRRPanel)
+
+```{r IRRPanel}
+#| fig.cap: "Due to the known issues with the interpretation of Cohen's kappa'
+#| statistic, we compred several alternative IRR statistics. While
+#| Krippendorf's alpha values are quite different from the other statistics,
+#| Gwet's AC1 and PABAK, both considered corrected versions of Cohen's kappa,
+#| show the same general trends. In general the value of Gwet's AC1 is higher,
+#| while the value of PABAK is about the same."
+#| out.width: "6in"
+knitr::include_graphics(
+	path = here::here("Results/Figures/irr_panel_plot.tiff")
+)
+```
+
+TODO make a table of Kappa values for each of the three different subsamples, these only include the entire sample.
+
+## Interrater agreement (subsamples)
+
+# Clinical prediction rules
+
+## Blah
+
+## Bland-Altman analysis
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

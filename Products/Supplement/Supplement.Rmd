@@ -1,0 +1,407 @@
+---
+title: |
+  Appendix to "Use of patient-reported symptom data in clinical decision rules for
+  predicting influenza in a telemedicine setting"
+output:
+  bookdown::word_document2:
+    toc: false
+    number_sections: true
+    global_numbering: true
+    fig_caption: yes
+bibliography:
+  - "refs.bib"
+  - "pkgs.bib"
+csl: american-medical-association.csl
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+
+FitFlextableToPage <- function(ft, pgwidth = 6){
+	
+	ft_out <- ft |> flextable::autofit()
+	
+	ft_out <- flextable::width(
+		ft_out,
+		width = dim(ft_out)$widths*pgwidth /
+			(flextable::flextable_dim(ft_out)$widths)
+	)
+	return(ft_out)
+}
+
+# Caption formatter
+format_cap <- function(str) {
+	out <-
+		str |>
+		gsub(pattern = "\t", replacement = "") |>
+		gsub(pattern = "\n", replacement = " ") 
+	return(out)
+}
+
+# Flextable fitter
+fit_flextable_to_page <- function(ft, pgwidth = 6){
+
+  ft_out <- ft |> flextable::autofit()
+
+  ft_out <-
+  	flextable::width(
+  		ft_out,
+  		width = dim(ft_out)$widths*pgwidth /
+  			(flextable::flextable_dim(ft_out)$widths))
+  return(ft_out)
+}
+```
+
+# Instructions for reproducing analysis
+
+1. Either clone the git repository, or download and unzip the folder.
+1. Navigate to the `Wrapper.R` script (and open it).
+1. Either "run all" or "source" the script from your IDE / GUI. (You could also run via command line if you prefer but it is unnecessary.)
+
+# Detailed methods and results
+
+## Sample size and data cleaning
+
+In total, we had records for $3,117$ unique visits to the clinic. Of these records, $7$ were duplicate entries in the data set we received, which were removed as they were attributable to clerical issues with the electronic system. Additionally, $635$ were missing symptom data. These records were collected during the first few weeks of data collection, and missing values were due to issues with the collection protocol and database. These patients were excluded from the analysis, as the mechanism of missingness was known to be unrelated to any of the fields of interest. The final study sample included $2,475$ with complete data, not all of these patients received a lab diagnosis.
+
+All patients received a final diagnosis by their clinician. One subset of $250$ patients received reverse transcription polymerase chain reaction (PCR) diagnoses, and a second, mutually exclusive subset of $420$ patients received rapid influenza diagnostic test (RIDT) diagnoses. Patients were specifically recruited into the PCR group, and out of patients in the "usual care" (non-PCR) group, RIDT tests were administered at the clinician's discretion. Notably, the original study [@dale2019] reported $264$ records in the PCR group, but we only had $250$ non-missing non-duplicate patients in this group.
+
+## CDR assessment
+
+We note that the TM utilizes the patient's measured temperature rather than subjective fever. However, patients were not asked to measure their own temperature at home during our study, so we assumed that any report of subjective fever corresponded with a fever greater than 37.3° C. This likely impacted the performance of the TM on our data.
+
+## Score models
+
+To develop a weighted score CDR, we followed the method used for the development of the FluScore CDR [@ebell2012], with some minor deviations. We examined the differences in symptom prevalences between diagnostic groups, correlations between symptoms, univariate logistic regression models for each symptom, a full multivariable model, a multivariable model using bidirectional stepwise elimination for variable selection, and a multivariable model using LASSO penalization for variable selection to determine which predictors should be included in the score. We constructed several candidate scores and used information criteria (AIC/BIC), our knowledge of *a priori* important symptoms [@monto2000], and parsimony to choose the best score model. We fit a multivariable unpenalized logistic regression model including the identified predictors of interest and then rounded the coefficients (doubling to avoid half points) to create a score model. Table \@ref(tab:ScoreModelsPerf) shows the performance of the candidate models when using the patient-reported symptom data.
+
+```{r ScoreModelsPerf}
+cap <- {
+	"Model performance metrics for the score models. The models shown were fitted
+	to the patient-reported data, and metrics were calculated using only the
+	derivation set."
+}
+
+here::here("Results", "Tables", "Score-AICs.Rds") |>
+	readr::read_rds() |>
+	flextable::set_caption(caption = format_cap(cap)) |>
+	flextable::line_spacing(space = 1, part = "body") |>
+	fit_flextable_to_page()
+```
+
+Since the names of each model were arbitrarily chosen by us, we show the coefficients with confidence intervals for each of the score models in table \@ref(tab:ScoreModelsCoefs).
+
+```{r ScoreModelsCoefs}
+cap <- {
+	"Estimated logistic regression coefficients (b) for the patient-reported
+	symptom data. All models were fit only to the derivation set. Confidence
+	intervals for the coefficients were calculated using the Wald method."
+}
+
+here::here("Results", "Tables", "Score-Points-Final-Pt.Rds") |>
+	readr::read_rds() |>
+	flextable::set_caption(caption = format_cap(cap)) |>
+	flextable::line_spacing(space = 1, part = "body") |>
+	flextable::fontsize(size = 8) |>
+	fit_flextable_to_page()
+```
+
+Coefficients and confidence intervals for each of the score models fit to the clinician-reported symptom data are shown in Table \@ref(tab:ScoreModelsCoefsCl).
+
+```{r ScoreModelsCoefsCl}
+cap <- {
+	"Estimated logistic regression coefficients (b) for the clinician-reported
+	symptom data. All models were fit only to the derivation set. Confidence
+	intervals for the coefficients were calculated using the Wald method."
+}
+
+here::here("Results", "Tables", "Score-Points-Final-Cl.Rds") |>
+	readr::read_rds() |>
+	flextable::set_caption(caption = format_cap(cap)) |>
+	flextable::line_spacing(space = 1, part = "body") |>
+	flextable::fontsize(size = 8) |>
+	fit_flextable_to_page()
+```
+
+### Tree models
+
+The best tree model was selected based on AUROCC, which is shown in Table \@ref(tab:modelAuc). A diagram of the conditional inference tree fitted to the
+patient data is shown in Figure \@ref(fig:tree), and the tree fitted to the
+clinician data is shown in Figure \@ref(fig:tree-cl).
+
+```{r tree}
+#| fig.cap: "The conditional inference tree, fitted to the patient data."
+#| out.width: "6in"
+knitr::include_graphics(here::here("Results", "Figures", "ctree-pt.tiff"))
+```
+
+```{r tree-cl}
+#| fig.cap: "The conditional inference tree, fitted to the clinician data."
+#| out.width: "6in"
+knitr::include_graphics(here::here("Results", "Figures", "ctree-cl.tiff"))
+```
+
+### Machine learning models
+
+The candidate machine learning models were: CART, conditional inference, and C5.0 decision trees with hyperparameter tuning; Bayesian Additive Regression Trees (BART); random forest; gradient-boosted tree using `xgboost`; logistic regression; logistic regression with LASSO penalization; logistic regression with elastic net penalization; $k$-Nearest Neighbors (knn); naive Bayes; and Support Vector Machine (SVM) models with linear, polynomial, and Radial Basis Function (RBF) kernels.
+
+Hyperparameters were selected for these models via a grid search with 25 candidate levels for each hyperparameter chosen by latin hypercube search of the parameter space. Candidate models were evaluated using 10-fold cross validation repeated 100 times on the derivation set (for precision of out-of-sample error estimates), and the hyperparameter set maximizing the AUROCC for each model was selected as the best set for that model. We then evaluated the models by fitting the best model of each time to the derivation set, and examining the out-of-sample performance on the validation set. Several of these models had similar validation set performances (AUROCC within 0.01 units).
+
+We selected the naive Bayes model as the model to present in the main text due to the competitive performance on both the clinician and patient data, and the relative simplicity of the classifier. While the naive Bayes model is difficult to interpret and difficult to compute by hand, the calculations are computationally efficient and simple. In a telemedicine setting where all calculations can be automated, these limitations matter much less than they would in a traditional healthcare setting.
+
+# Clinician and PCR agreement
+
+```{r}
+test_n <-
+	readr::read_rds(here::here("Results", "Data", "test-n.Rds")) |>
+	unlist()
+
+da <-
+	readr::read_rds(here::here("Results","Data", "diagnosis-agreement-df.Rds")) |>
+	dplyr::filter(
+		method == "pcr",
+		statistic %in% c("percent agreement", "AUC")
+	) |>
+	dplyr::mutate(
+		dplyr::across(
+			tidyselect:::where(is.numeric),
+			\(x) sprintf("%.1f", x * 100)
+		)
+	)
+```
+
+
+We had many more patients included in our study with clinician diagnoses (
+$n = `r test_n[["has_diag"]]`$) than PCR tests ($n = `r test_n[["has_pcr"]]`$).
+Using a larger sample size would likely help with model fitting. However, the
+clinicians in our study saw the PCR results before they made their final
+diagnosis, so we cannot directly assess the accuracy of the clinicians at
+predicting influenza.
+
+Despite having access to the PCR diagnoses, however, clinicians only
+agreed with the PCR results $`r da[[1, 3]]` \%$ (95\% CI:
+$`r da[[1, 4]]`\%, \ `r da[[1, 5]]`\%$) of the time. Table \@ref(tab:CLPCR)
+shows the contingency table of diagnoses by the clinicians vs. the PCR results.
+
+```{r CLPCR}
+cap <- {
+	"Contigency table for PCR vs. unblinded clinician diagnoses for the same
+	patients. Most of the time, clincians agreed with the PCR results, but
+	rarely the diagnoses differed. Justifications for clinician diagnoses were
+	not collected as part of the study."
+}
+
+readRDS(here::here("Results", "Tables", "Cl-PCR.Rds")) |>
+	flextable::set_caption(format_cap(cap)) |>
+	flextable::fontsize(size = 10, part = "all") |>
+	flextable::autofit(add_w = 0, add_h = 0)
+```
+
+
+# Additional IRR statistics
+
+There are known problems with the interpretation of Cohen's kappa statistic. Cohen's kappa depends on the prevalence and variance of the data. That is, the percentage of yes/no answers affects Cohen's kappa, even if the actual percent agreement stays the same. Cohen's kappa is maximized when half of the cases are true 'yes' answers and half are true 'no' answers, which can lead to low kappa values when prevalence is high or low, regardless of the actual percentage agreement. This property is sometimes called "the paradox of kappa" [@zec2017; @minozzi2022].
+
+Alternative statistics to Cohen's kappa have been proposed, including the prevalence-and-bias-adjusted kappa (PABAK) [@byrt1993], Gwet's AC1 statistic [@gwet2008; @gwet2015], and Krippendorff's alpha statistic [@gwet2015; @zapf2016]. In addition to calculating Cohen's kappa, we calculated the percent agreement along with these three additional statistics. The percent agreement is not corrected for chance agreement. PABAK and AC1 are corrected for chance agreement but were developed to limit the so-called "paradox of kappa". Finally, Krippendorff's alpha is based on correcting chance disagreement rather than chance agreement, and whether it is similar or different from kappa-based statistics is inconsistent.
+
+Our observed Krippendorff's alpha values vary widely, and do not show a general trend along with the kappa-type statistics we computed. In general, the AC1 and PABAK values follow the same trend as the reported Cohen's kappa values in the main text. Notably, Gwet's AC1, when interpreted with the same guidelines used for Cohen's kappa, is larger and assigns some symptoms to a higher agreement level. Cough and pharyngitis are marked as high agreement using AC1, which may indicate that pharyngitis should be considered in the development of influenza CPRs. Since pharyngitis was not included in the CPRs we tested, and cough already had one of the highest agreement ratings in our main analysis, these findings do not substantially change our conclusions.
+
+```{r}
+#| fig.cap: "Additional IRR statistics for agreement between symptom reports.
+#| Gwet's AC1 statistic, PABAK, and percent agreement show the same overall
+#| trends as the Cohen's kappa statistic reported in the main text. However,
+#| Krippendorff's alpha is quite different, and shows no systematic pattern
+#| in the differences from the other four statistics."
+#| out.width: "6in"
+knitr::include_graphics(
+	path = here::here("Results/Figures/pcr_irr_panel_plot.tiff")
+)
+```
+
+# Performance of all models
+
+We evaluated the performance of all of the candidate models. Table \@ref(tab:modelAuc) shows the derivation and validation set AUROCC values on both the clinician-reported and patient-reported data for all of the models we fit.
+
+```{r modelAuc}
+cap <- {
+	"Estimated AUROCC for all candidate models. The AUROCC was not estimable
+	for the LASSO heuristic model on the validation set of clinician-reported
+	symptom data, as all patients were assigned the same score in this set."
+}
+
+readRDS(here::here("Results", "Tables", "Supplement-AUC-Tab.Rds")) |>
+	flextable::set_caption(caption = format_cap(cap)) |>
+	flextable::line_spacing(space = 1, part = "body") |>
+	fit_flextable_to_page()
+```
+
+# Risk groups for clinician data models
+
+We used the same 10% and 50% thresholds to place patients into risk groups using
+models fit to the clinician-reported symptom data. We used the same modeling
+procedures as for the patient-reported data, but model tuning was performed
+using the clinician-reported data instead.
+
+The models trained to the clinician data, with the exception of the tree model,
+performed slightly better at placing patients in the low and moderate risk groups (Table \@ref(tab:Cl-RG)). However, the majority of patients were still placed in the high risk group for all three of the best-performing models, with no patients being identified as low risk by the conditional inference tree model.
+
+```{r Cl-RG}
+cap <- {
+	"Risk group statistics for the models built using the clinician data. The models
+	were trained using the derivation set of clinician-reported symptom data, and
+	evaluated on both the derivation and validation sets separately. We obtained
+	quantiative risk predictions for each individual from the models, and
+	assigned individuals with a risk less than 10% to the low risk group,
+	individuals with a risk between 10% and 50% to the moderate risk group, and
+	individuals with a risk greater than 50% to the high risk group.
+	LR: stratum-specific likelihood ratio."
+}
+
+readRDS(here::here("Results", "Tables", "Risk-Groups-Table-Cl.Rds")) |>
+	flextable::set_caption(format_cap(cap)) |>
+	flextable::fontsize(size = 10, part = "all") |>
+	flextable::autofit(add_w = 0, add_h = 0)
+```
+
+# Risk group threshold analysis
+
+While the 10% and 50% thresholds are based on the expert knowledge of practicing
+physicians, [@ebell2012; @sintchenko2002] a recent study suggested increased
+thresholds of 25% and 60% in the context of telehealth visits for influenza-like
+illness. [@cai2022]
+
+## 25%/60% thresholds
+
+We re-computed the risk groups and stratum-specific statistics for both the
+patient (Table \@ref(tab:pt-2560)) and clinician (Table \@ref(tab:cl-2560)) reported
+data using the 25% and 60% thresholds.
+
+For the patient models, while more patients were classified as low or moderate
+risk, the majority of patients remained in the high risk group (as compared
+to the risk groups using the 10% and 50% thresholds).
+
+```{r pt-2560}
+cap <- {
+	"Risk group statistics for the models built using the patient data.
+	We assigned risk groups using a 25% testing threshold and a 60%
+	treatment threshold."
+}
+
+readRDS(here::here("Results", "Tables", "threshold-2560-pt.Rds")) |>
+	flextable::set_caption(format_cap(cap)) |>
+	flextable::fontsize(size = 10, part = "all") |>
+	flextable::autofit(add_w = 0, add_h = 0)
+```
+
+For the clinician data models, the Naive Bayes and LASSO score models showed
+similar trends. Slightly more patients were categorized as low or moderate
+risk overall, but the majority of patients remained in the high risk group.
+However, for the conditional inference tree model, there was an even distribution
+of patients across the three risk groups.
+
+```{r cl-2560}
+cap <- {
+	"Risk group statistics for the models built using the clinician data.
+	We assigned risk groups using a 25% testing threshold and a 60%
+	treatment threshold."
+}
+
+readRDS(here::here("Results", "Tables", "threshold-2560-cl.Rds")) |>
+	flextable::set_caption(format_cap(cap)) |>
+	flextable::fontsize(size = 10, part = "all") |>
+	flextable::autofit(add_w = 0, add_h = 0)
+```
+
+## 30%/70% thresholds
+
+We additionally recomputed the risk groups and stratum-specific statistics using
+thresholds of 30% and 70% for both the
+patients (Table \@ref(tab:pt-3070)) and clinicians (Table \@ref(tab:cl-3070)).
+Increasing the thresholds to be even higher should
+increase the number of patients in the low risk group, but may be difficult to
+justify clinically.
+
+The patient data models continued to exhibit the same problem: even with
+these high thresholds, the majority of patients were classified as high risk,
+across all models and both samples. However, the differences from the 25% and
+60% threshold analysis are minor.
+
+```{r pt-3070}
+cap <- {
+	"Risk group statistics for the models built using the patient data.
+	We assigned risk groups using a 30% testing threshold and a 70%
+	treatment threshold."
+}
+
+readRDS(here::here("Results", "Tables", "threshold-3070-pt.Rds")) |>
+	flextable::set_caption(format_cap(cap)) |>
+	flextable::fontsize(size = 10, part = "all") |>
+	flextable::autofit(add_w = 0, add_h = 0)
+```
+
+For the clinician data models, most models remained exactly the same, with
+the exception of the Naive Bayes model on the derivation group. Each
+of the models only predicts a discrete set of risk estimates, so if a change
+in the threshold does not reach the next discrete risk estimate, none of the
+stratum-specific statistics will change.
+
+```{r cl-3070}
+cap <- {
+	"Risk group statistics for the models built using the clinician data.
+	We assigned risk groups using a 30% testing threshold and a 70%
+	treatment threshold."
+}
+
+readRDS(here::here("Results", "Tables", "threshold-3070-cl.Rds")) |>
+	flextable::set_caption(format_cap(cap)) |>
+	flextable::fontsize(size = 10, part = "all") |>
+	flextable::autofit(add_w = 0, add_h = 0)
+```
+
+## Continuous risk estimates
+
+Overall, while varying the thresholds did assign more patients to the low
+and moderate risk groups, with both of our trials, the majority of patients
+were still assigned to the high risk group. This can be explained by
+examining the quantitative risk predictions made by the models without
+binning the estimates into groups.
+
+Figure \@ref(fig:risk-histograms) shows histograms of the predicted risk for each model.
+The point score and tree models both produce a sparse set of discrete risk outcomes,
+so varying the threshold does not affect categorizations until the next measurement
+is crossed. While the naive bayes model has a larger set of possible outcomes,
+most of the predictions were close to a risk of 1.
+
+```{r risk-histograms}
+#| fig.cap: "Histograms of individual risks predicted by the models (shown on
+#| the left side). Bins represent a width of 5%. Across all models, patients
+#| were more often assigned a high risk, and most patients who were at high
+#| risk were assigned the same or very close risk estimates."
+#| out.width: "6in"
+knitr::include_graphics(
+	path = here::here("Results", "Figures", "risk-histograms.tiff")
+)
+```
+
+We could arbitrarily choose even higher thresholds to attempt to improve
+the model metrics, or we could computationally optimize the stratum-specific
+likelihood ratios by choosing threshold values. But it is unlikely that
+such data-driven threshold choices would be contextually meaningful or
+robust across multiple studies. Examining model calibration on the continuous
+risk estimates would be more revealing than optimizing thresholds for
+categorizing a continuous variable.
+
+# R session and package information
+
+```{r}
+pkgs <-
+	zlib::quiet(renv::dependencies(path = here::here())) |>
+	dplyr::pull(Package) |>
+	unique() |>
+	as.list()
+invisible(lapply(pkgs, require, character.only = TRUE,
+								 attach.required = TRUE, warn.conflicts = FALSE))
+
+sessionInfo()
+```
+
+# References

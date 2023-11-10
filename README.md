@@ -33,11 +33,14 @@ additional README in that file with more detailed information.
 
 The figures, tables, and data used for or created by data analysis are documented in this folder.
 
-# `Wrapper.R`
+# Cope reproducibility
 
-This is a shortcut R script that will run all of the code needed to reproduce
-our analysis. Running this may be time intensive, but will ensure that all
-parts of the code are run in the correct order.
+To re-run the code in this repository, you should:
+* Install R 4.2.2 (newer versions may not work with `renv`).
+* Open the R project -- `renv` should activate and install the correct version of itself.
+* Run `renv::restore()` to install the correct package versions.
+* You can then run the code as described in the `R` folder. The script `wrapper.R` is a convenience utility
+for rerunning all of the code at once (this will take a long time).
 
 
 
